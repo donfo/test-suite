@@ -48,6 +48,7 @@ async function getTestModulesAsync() {
     require('./tests/Video'),
     require('./tests/Permissions'),
     require('./tests/Notifications'),
+    require('./tests/MediaLibrary')
   ];
   if (Expo.Constants.isDevice) {
     // TODO: add require('./tests/Camera') once it passes on DeviceFarm
