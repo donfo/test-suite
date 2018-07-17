@@ -51,8 +51,12 @@ async function getTestModulesAsync() {
     require('./tests/MediaLibrary')
   ];
   if (Expo.Constants.isDevice) {
-    // TODO: add require('./tests/Camera') once it passes on DeviceFarm
     modules = modules.concat([require('./tests/Brightness')]);
+    modules = modules.concat([require('./tests/BarCodeScanner')]);
+    if (Platform.OS === 'android') {
+      // The Camera tests are flaky on iOS, i.e. they fail randomly
+      modules = modules.concat([require('./tests/Camera')]);
+    }
   }
   return modules;
 }

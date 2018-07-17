@@ -16,6 +16,7 @@ export async function test(t, { setPortalChild, cleanupPortal }) {
 
   describeWithPermissions('Camera', () => {
     let instance = null;
+    let originalTimeout;
 
     const refSetter = ref => {
       instance = ref;
@@ -24,11 +25,7 @@ export async function test(t, { setPortalChild, cleanupPortal }) {
     const mountAndWaitFor = (child, propName = 'onCameraReady') =>
       new Promise(resolve => {
         const response = originalMountAndWaitFor(child, propName, setPortalChild);
-        if (Platform.OS === 'ios') {
-          resolve(response);
-        } else {
-          setTimeout(() => resolve(response), 1500);
-        }
+        setTimeout(() => resolve(response), 1500);
       });
 
     t.beforeAll(async () => {
@@ -38,6 +35,13 @@ export async function test(t, { setPortalChild, cleanupPortal }) {
       await TestUtils.acceptPermissionsAndRunCommandAsync(() => {
         return Permissions.askAsync(Permissions.AUDIO_RECORDING);
       });
+
+      originalTimeout = t.jasmine.DEFAULT_TIMEOUT_INTERVAL;
+      t.jasmine.DEFAULT_TIMEOUT_INTERVAL = originalTimeout * 3;
+    });
+
+    t.afterAll(() => {
+      t.jasmine.DEFAULT_TIMEOUT_INTERVAL = originalTimeout;
     });
 
     t.beforeEach(async () => {
@@ -51,14 +55,14 @@ export async function test(t, { setPortalChild, cleanupPortal }) {
     });
 
     if (Platform.OS === 'android') {
-      /*t.describe('Camera.getSupportedRatiosAsync', () => {
+      t.describe('Camera.getSupportedRatiosAsync', () => {
         t.it('returns an array of strings', async () => {
           await mountAndWaitFor(<Camera style={style} ref={refSetter} />);
           const ratios = await instance.getSupportedRatiosAsync();
           t.expect(ratios instanceof Array).toBe(true);
           t.expect(ratios.length).toBeGreaterThan(0);
         });
-      });*/
+      });
     }
 
     t.describe('Camera.takePictureAsync', () => {
@@ -99,21 +103,21 @@ export async function test(t, { setPortalChild, cleanupPortal }) {
         t.expect(picture.base64).toBeDefined();
       });
 
-      // https://www.awaresystems.be/imaging/tiff/tifftags/privateifd/exif/flash.html
-      // Android returns invalid values! (I've tested the code on an Android tablet
-      // that has no flash and it returns Flash = 0, meaning that the flash did not fire,
-      // but is present.)
+      t.it('returns proper `exif.Flash % 2 = 0` if the flash is off', async () => {
+        await mountAndWaitFor(
+          <Camera ref={refSetter} flashMode={Camera.Constants.FlashMode.off} style={style} />
+        );
+        let picture = await instance.takePictureAsync({ exif: true });
+        t.expect(picture).toBeDefined();
+        t.expect(picture.exif).toBeDefined();
+        t.expect(picture.exif.Flash % 2 === 0).toBe(true);
+      });
 
       if (Platform.OS === 'ios') {
-        t.it('returns proper `exif.Flash % 2 = 0` if the flash is off', async () => {
-          await mountAndWaitFor(
-            <Camera ref={refSetter} flashMode={Camera.Constants.FlashMode.off} style={style} />
-          );
-          let picture = await instance.takePictureAsync({ exif: true });
-          t.expect(picture).toBeDefined();
-          t.expect(picture.exif).toBeDefined();
-          t.expect(picture.exif.Flash % 2 === 0).toBe(true);
-        });
+        // https://www.awaresystems.be/imaging/tiff/tifftags/privateifd/exif/flash.html
+        // Android returns invalid values! (I've tested the code on an Android tablet
+        // that has no flash and it returns Flash = 0, meaning that the flash did not fire,
+        // but is present.)
 
         t.it('returns proper `exif.Flash % 2 = 1` if the flash is on', async () => {
           await mountAndWaitFor(
@@ -128,7 +132,6 @@ export async function test(t, { setPortalChild, cleanupPortal }) {
 
       // https://www.awaresystems.be/imaging/tiff/tifftags/privateifd/exif/whitebalance.html
 
-      // Fails for iOS.
       t.it('returns `exif.WhiteBalance = 1` if white balance is manually set', async () => {
         await mountAndWaitFor(
           <Camera
@@ -215,10 +218,16 @@ export async function test(t, { setPortalChild, cleanupPortal }) {
     });
 
     t.describe('Camera.recordAsync', () => {
+      t.beforeEach(async () => {
+        if (Platform.OS === 'ios') {
+          await waitFor(500);
+        }
+      });
+
       t.it('returns a local URI', async () => {
         await mountAndWaitFor(<Camera ref={refSetter} style={style} />);
         const recordingPromise = instance.recordAsync();
-        await waitFor(1000);
+        await waitFor(2500);
         instance.stopRecording();
         const response = await recordingPromise;
         t.expect(response).toBeDefined();
@@ -229,7 +238,7 @@ export async function test(t, { setPortalChild, cleanupPortal }) {
 
       t.it('stops the recording after maxDuration', async () => {
         await mountAndWaitFor(<Camera ref={refSetter} style={style} />);
-        const response = await instance.recordAsync({ maxDuration: 1 });
+        const response = await instance.recordAsync({ maxDuration: 2 });
         recordedFileUri = response.uri;
       });
 
@@ -240,13 +249,13 @@ export async function test(t, { setPortalChild, cleanupPortal }) {
         );
         await retryForStatus(instance, { isBuffering: false });
         const video = await instance.getStatusAsync();
-        t.expect(video.durationMillis).toBeLessThan(1100);
-        t.expect(video.durationMillis).toBeGreaterThan(900);
+        t.expect(video.durationMillis).toBeLessThan(2250);
+        t.expect(video.durationMillis).toBeGreaterThan(1750);
       });
 
       t.it('stops the recording after maxFileSize', async () => {
         await mountAndWaitFor(<Camera ref={refSetter} style={style} />);
-        await instance.recordAsync({ maxFileSize: 256 * 1024 }); // 512 KB
+        await instance.recordAsync({ maxFileSize: 256 * 1024 }); // 256 KiB
       });
 
       t.describe('can record consecutive clips', () => {
@@ -278,9 +287,9 @@ export async function test(t, { setPortalChild, cleanupPortal }) {
               }
             });
 
-          await recordFor(500);
-          await waitFor(500);
-          await recordFor(500);
+          await recordFor(1000);
+          await waitFor(1000);
+          await recordFor(1000);
         });
 
         t.it('started/stopped automatically', async () => {
