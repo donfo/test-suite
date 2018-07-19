@@ -253,6 +253,24 @@ export async function test(t, { setPortalChild, cleanupPortal }) {
         t.expect(video.durationMillis).toBeGreaterThan(1750);
       });
 
+      // Test for the fix to: https://github.com/expo/expo/issues/1976
+      t.it('records using front camera and Camera2 API', async () => {
+        await mountAndWaitFor(
+          <Camera ref={refSetter} style={style} type={Camera.Constants.Type.front} useCamera2Api />
+        );
+        const response = await instance.recordAsync({ maxDuration: 2 });
+
+        await mountAndWaitFor(
+          <Video style={style} source={{ uri: response.uri }} ref={refSetter} />,
+          'onLoad'
+        );
+        await retryForStatus(instance, { isBuffering: false });
+        const video = await instance.getStatusAsync();
+
+        t.expect(video.durationMillis).toBeLessThan(2250);
+        t.expect(video.durationMillis).toBeGreaterThan(1750);
+      });
+
       t.it('stops the recording after maxFileSize', async () => {
         await mountAndWaitFor(<Camera ref={refSetter} style={style} />);
         await instance.recordAsync({ maxFileSize: 256 * 1024 }); // 256 KiB
