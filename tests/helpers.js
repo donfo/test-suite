@@ -30,7 +30,7 @@ export const mountAndWaitFor = (
   new Promise(resolve => {
     // `ref` prop is set directly in the child, not in the `props` object.
     // https://github.com/facebook/react/issues/8873#issuecomment-275423780
-    const previousPropFunc = propName === 'ref' ? child.ref : child[propName];
+    const previousPropFunc = propName === 'ref' ? child.ref : child.props[propName];
     const newPropFunc = val => {
       previousPropFunc && previousPropFunc(val);
       resolve(val);
@@ -39,8 +39,32 @@ export const mountAndWaitFor = (
     setPortalChild(clonedChild);
   });
 
+export class TimeoutError extends Error {
+  constructor(...args) {
+    super(...args);
+    this.name = 'TimeoutError';
+  }
+}
+
+export const mountAndWaitForWithTimeout = (
+  child: React.Node,
+  propName = 'ref',
+  setPortalChild: React.Node => void,
+  timeout
+) =>
+  Promise.race([
+    mountAndWaitFor(child, propName, setPortalChild),
+    new Promise((resolve, reject) => {
+      setTimeout(() => {
+        reject(new TimeoutError(`mountAndWaitFor did not resolve after ${timeout} ms.`));
+      }, timeout);
+    }),
+  ]);
+
 export default {
   waitFor,
+  TimeoutError,
   retryForStatus,
   mountAndWaitFor,
+  mountAndWaitForWithTimeout,
 };

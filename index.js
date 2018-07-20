@@ -47,8 +47,10 @@ async function getTestModulesAsync() {
     require('./tests/AdMobRewarded'),
     require('./tests/Video'),
     require('./tests/Permissions'),
+    require('./tests/MediaLibrary'),
     require('./tests/Notifications'),
-    require('./tests/MediaLibrary')
+    require('./tests/FBNativeAd'),
+    require('./tests/FBBannerAd'),
   ];
   if (Expo.Constants.isDevice) {
     modules = modules.concat([require('./tests/Brightness')]);
