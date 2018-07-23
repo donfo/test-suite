@@ -12,7 +12,7 @@ const {
   withNativeAd,
   MediaView,
   AdIconView,
-  TriggerableFragment,
+  TriggerableView,
 } = Expo.FacebookAds;
 
 AdSettings.addTestDevice(AdSettings.currentDeviceHash);
@@ -37,11 +37,11 @@ const FullNativeAd = withNativeAd(({ nativeAd }) => (
     <View>
       <AdIconView />
       <View>
-        <TriggerableFragment>
+        <TriggerableView>
           {nativeAd.advertiserName && <Text>{nativeAd.advertiserName}</Text>}
           {nativeAd.sponsoredTranslation && <Text>{nativeAd.sponsoredTranslation}</Text>}
           {nativeAd.headline && <Text>{nativeAd.headline}</Text>}
-        </TriggerableFragment>
+        </TriggerableView>
       </View>
     </View>
 
@@ -56,9 +56,9 @@ const FullNativeAd = withNativeAd(({ nativeAd }) => (
       </View>
 
       <View>
-        <TriggerableFragment>
+        <TriggerableView>
           <Text>{nativeAd.callToActionText}</Text>
-        </TriggerableFragment>
+        </TriggerableView>
       </View>
     </View>
   </View>
