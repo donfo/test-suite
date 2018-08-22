@@ -47,6 +47,8 @@ const ALBUM_KEYS = [
 const GET_ASSETS_KEYS = ['assets', 'endCursor', 'hasNextPage', 'totalCount'];
 const ALBUM_NAME = '__tseTyrarbiLaidem__';
 const WRONG_NAME = 'wertyuiopdfghjklvbnhjnftyujn';
+const FIRST_ALBUM = '__iosTestAlbum__';
+const SECOND_ALBUM = '__mublAtseTsoi__';
 const WRONG_ID = '1234567890';
 
 async function getFiles() {
@@ -202,27 +204,36 @@ export async function test(t) {
       });
     });
 
-    t.describe('Delete test', async () => {
-      t.it('Partial delete', async () => {
+    t.describe('Delete tests', async () => {
+      t.it('deleteAsstetsAsync', async () => {
         const { assets } = await MediaLibrary.getAssetsAsync({ album, mediaType: MEDIA_TYPES });
-        const result = await MediaLibrary.deleteAssetsAsync(assets.slice(0, 3));
+        const result = await MediaLibrary.deleteAssetsAsync(assets.slice(0, 2));
         const { assets: rest } = await MediaLibrary.getAssetsAsync({
           album,
           mediaType: MEDIA_TYPES,
         });
         t.expect(result).toEqual(true);
-        t.expect(rest.length).toBe(assets.length - 3);
+        t.expect(rest.length).toBe(F_SIZE - 2);
       });
-      t.it('Delete everything', async () => {
-        const { assets } = await MediaLibrary.getAssetsAsync({ album, mediaType: MEDIA_TYPES });
-        t.expect(assets.length).toBe(IMG_NUMBER + VIDEO_NUMBER - 3);
-        const result = await MediaLibrary.deleteAssetsAsync(assets);
-        const { assets: rest } = await MediaLibrary.getAssetsAsync({
-          album,
-          mediaType: MEDIA_TYPES,
-        });
+      t.it('deleteAlbumsAsync', async () => {
+        const result = await MediaLibrary.deleteAlbumsAsync(album, true);
         t.expect(result).toEqual(true);
-        t.expect(rest.length).toBe(0);
+        album = await MediaLibrary.getAlbumAsync(ALBUM_NAME);
+        t.expect(album).toBeNull();
+      });
+      t.it('deleteManyAlbums', async () => {
+        const assets = await getAssets(files.slice(0, 2));
+        let firstAlbum = await MediaLibrary.createAlbumAsync(FIRST_ALBUM, assets[0], false);
+        let secondAlbum = await MediaLibrary.createAlbumAsync(SECOND_ALBUM, assets[1], false);
+        await MediaLibrary.deleteAlbumsAsync([firstAlbum, secondAlbum], true);
+        firstAlbum = await MediaLibrary.getAlbumAsync(FIRST_ALBUM);
+        secondAlbum = await MediaLibrary.getAlbumAsync(SECOND_ALBUM);
+        const firstAsset = await MediaLibrary.getAssetInfoAsync(assets[0]);
+        const secondAsset = await MediaLibrary.getAssetInfoAsync(assets[1]);
+        t.expect(firstAlbum).toBeNull();
+        t.expect(secondAlbum).toBeNull();
+        t.expect(firstAsset).toBeNull();
+        t.expect(secondAsset).toBeNull();
       });
     });
 
